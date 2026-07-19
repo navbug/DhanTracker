@@ -3,14 +3,16 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // DELETE /api/watchlists/[id] — delete a watchlist
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const user = await requireAuth();
-    const { id } = params;
+    const { id } = await params;
 
     // Verify ownership
     const watchlist = await db.watchlist.findUnique({
@@ -55,11 +57,11 @@ const updateSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const user = await requireAuth();
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     const parsed = updateSchema.safeParse(body);
@@ -101,11 +103,11 @@ export async function PATCH(
 // GET /api/watchlists/[id] — get a single watchlist with its stocks
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const user = await requireAuth();
-    const { id } = params;
+    const { id } = await params;
 
     const watchlist = await db.watchlist.findUnique({
       where: { id },
