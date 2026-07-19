@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // Enable instrumentation.ts (for cache warmer at server start)
-    instrumentationHook: true,
+    // instrumentationHook: true,
     serverActions: {
       allowedOrigins: ["localhost:3000"],
     },
