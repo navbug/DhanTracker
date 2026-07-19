@@ -16,6 +16,10 @@ const createWatchlistSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const full = new URL(request.url).searchParams.get("full") === "true";
 
     const watchlists = await db.watchlist.findMany({
@@ -68,6 +72,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const parsed = createWatchlistSchema.safeParse(body);
