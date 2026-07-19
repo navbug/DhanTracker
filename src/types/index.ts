@@ -97,7 +97,9 @@ export type TradeOutcome =
   | "OPEN"
   | "TARGET_HIT"
   | "SL_HIT"
-  | "PARTIAL_PROFIT";
+  | "PARTIAL_PROFIT"
+  | "BREAKEVEN"
+  | "MANUAL_EXIT";
 
 export interface Trade {
   id: string;
@@ -114,8 +116,8 @@ export interface Trade {
   timeTaken?: string;
   remark?: string;
   screenshots: string[];
-  pnl?: number;
-  exitPrice?: number;
+  pnl: number | null;
+  exitPrice?: number | null;
   createdAt: string;
   updatedAt: string;
 }
