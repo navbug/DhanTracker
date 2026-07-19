@@ -17,20 +17,21 @@ async function verifyAccess(watchlistId: string, stockId: string, userId: string
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string; stockId: string } }
+  { params }: { params: Promise<{ id: string; stockId: string }> }
 ) {
   try {
-    const user = await requireAuth();
-    const stock = await verifyAccess(params.id, params.stockId, user.id);
+    const { id, stockId } = await params;
+    const user: any = await requireAuth();
+    const stock = await verifyAccess(id, stockId, user.id);
     if (!stock) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
 
-    await db.watchlistStock.delete({ where: { id: params.stockId } });
+    await db.watchlistStock.delete({ where: { id: stockId } });
 
     // Re-normalize positions after deletion
     const remaining = await db.watchlistStock.findMany({
-      where: { watchlistId: params.id },
+      where: { watchlistId: id },
       orderBy: { position: "asc" },
       select: { id: true },
     });
@@ -41,7 +42,7 @@ export async function DELETE(
       )
     );
 
-    return NextResponse.json({ success: true, data: { id: params.stockId } });
+    return NextResponse.json({ success: true, data: { id: stockId } });
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
