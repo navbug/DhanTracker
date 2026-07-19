@@ -28,15 +28,18 @@ async function verifyOwnership(tradeId: string, userId: string) {
   return trade;
 }
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // ─── GET /api/trades/[id] ────────────────────────────────────────────────────
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     const user = await requireAuth();
-    const trade = await db.trade.findUnique({ where: { id: params.id } });
+    const trade = await db.trade.findUnique({ where: { id } });
     if (!trade || trade.userId !== user.id) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
@@ -74,11 +77,12 @@ const updateTradeSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const user = await requireAuth();
-    const owned = await verifyOwnership(params.id, user.id);
+    const { id } = await params;
+    const user: any = await requireAuth();
+    const owned = await verifyOwnership(id, user.id);
     if (!owned) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
@@ -93,7 +97,7 @@ export async function PATCH(
     }
 
     // Fetch current trade to recalculate P&L with merged values
-    const current = await db.trade.findUnique({ where: { id: params.id } });
+    const current = await db.trade.findUnique({ where: { id } });
     if (!current) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
 
     const merged = { ...current, ...parsed.data };
@@ -113,7 +117,7 @@ export async function PATCH(
     };
 
     const updated = await db.trade.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -135,16 +139,17 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const user = await requireAuth();
-    const owned = await verifyOwnership(params.id, user.id);
+    const { id } = await params;
+    const user: any = await requireAuth();
+    const owned = await verifyOwnership(id, user.id);
     if (!owned) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
-    await db.trade.delete({ where: { id: params.id } });
-    return NextResponse.json({ success: true, data: { id: params.id } });
+    await db.trade.delete({ where: { id } });
+    return NextResponse.json({ success: true, data: { id } });
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
