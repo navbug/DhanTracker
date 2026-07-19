@@ -52,6 +52,10 @@ function calculatePnL(
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     const outcome = searchParams.get("outcome"); // "OPEN"|"TARGET_HIT"|"SL_HIT"|...
@@ -115,6 +119,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const parsed = createTradeSchema.safeParse(body);
