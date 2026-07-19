@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
 
         // Extract metadata from NSE response
         const companyName = raw.info?.companyName ?? undefined;
-        const sector = raw.metadata?.sectorName ?? raw.info?.industry ?? undefined;
-        const issuedSize: number = raw.tradeInfo?.issuedSize ?? raw.metadata?.issuedSize ?? 0;
+        const sector = undefined;
+        const issuedSize: number = 0;
         // marketCap in Cr = (lastPrice × issuedSize) / 1e7
         const marketCap = issuedSize
           ? Math.round((p.lastPrice * issuedSize) / 1e7) / 100
@@ -71,10 +71,10 @@ export async function POST(request: NextRequest) {
           pChange: p.pChange ?? 0,
           open: p.open ?? p.lastPrice,
           close: p.previousClose ?? p.lastPrice,
-          high: p.high ?? p.lastPrice,
-          low: p.low ?? p.lastPrice,
-          volume: raw.tradeInfo?.totalTradedVolume ?? 0,
-          totalTradedVolume: raw.tradeInfo?.totalTradedVolume ?? 0,
+          high: p.lastPrice,
+          low: p.lastPrice,
+          volume: 0,
+          totalTradedVolume: 0,
           yearHigh: p.weekHighLow?.max ?? p.lastPrice,
           yearLow: p.weekHighLow?.min ?? p.lastPrice,
           issuedSize: issuedSize || undefined,
