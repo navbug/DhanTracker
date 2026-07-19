@@ -9,15 +9,18 @@ async function verifyOwnership(id: string, userId: string) {
   return board;
 }
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // ─── GET /api/research/[id] — full board including canvas JSON ────────────────
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     const user = await requireAuth();
-    const board = await db.research.findUnique({ where: { id: params.id } });
+    const board = await db.research.findUnique({ where: { id } });
     if (!board || board.userId !== user.id) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
@@ -46,11 +49,12 @@ const updateSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const user = await requireAuth();
-    const owned = await verifyOwnership(params.id, user.id);
+    const { id } = await params;
+    const user: any = await requireAuth();
+    const owned = await verifyOwnership(id, user.id);
     if (!owned) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
@@ -65,7 +69,7 @@ export async function PATCH(
     }
 
     const updated = await db.research.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
         ...(parsed.data.category !== undefined ? { category: parsed.data.category } : {}),
@@ -96,16 +100,17 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const user = await requireAuth();
-    const owned = await verifyOwnership(params.id, user.id);
+    const { id } = await params;
+    const user: any = await requireAuth();
+    const owned = await verifyOwnership(id, user.id);
     if (!owned) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     }
-    await db.research.delete({ where: { id: params.id } });
-    return NextResponse.json({ success: true, data: { id: params.id } });
+    await db.research.delete({ where: { id } });
+    return NextResponse.json({ success: true, data: { id } });
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
