@@ -6,13 +6,13 @@ import { isPredefinedIndex, getIndexMeta } from "@/data/indices/index";
 import { db } from "@/lib/db";
 
 interface WatchlistPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: WatchlistPageProps): Promise<Metadata> {
-  const {id} = await params;
+  const { id } = await params;
   if (isPredefinedIndex(id)) {
     const meta = getIndexMeta(id);
     return { title: meta?.name ?? "Watchlist" };
@@ -33,7 +33,7 @@ export async function generateMetadata({
 }
 
 export default async function WatchlistPage({ params }: WatchlistPageProps) {
-  const {id} = await params;
+  const { id } = await params;
   const session = await auth();
   if (!session?.user) redirect("/");
 
