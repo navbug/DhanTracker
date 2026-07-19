@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
       ContentType: contentType,
       // Set max 10MB
       // ContentLengthRange: { min: 1, max: 10 * 1024 * 1024 },
-    } as Parameters<typeof PutObjectCommand>[0]);
+    });
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 }); // 5 min
     const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
