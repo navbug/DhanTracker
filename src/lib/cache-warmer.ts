@@ -42,8 +42,7 @@ export async function warmNifty500(): Promise<void> {
       const symbol = symbols[i];
 
       // issuedSize from tradeInfo or metadata
-      const issuedSize: number =
-        raw.tradeInfo?.issuedSize ?? raw.metadata?.issuedSize ?? 0;
+      const issuedSize: number = 0;
 
       // marketCap in Cr. = (lastPrice × issuedSize) / 1e7
       // issuedSize is total shares, lastPrice is in ₹
@@ -54,7 +53,6 @@ export async function warmNifty500(): Promise<void> {
 
       // Sector: prefer metadata.sectorName, fall back to info.industry
       const sector =
-        raw.metadata?.sectorName ??
         raw.info?.industry ??
         // Fall back to our static index data if NSE doesn't return it
         NIFTY500_STOCKS.find((s) => s.symbol === symbol)?.sector;
@@ -72,10 +70,10 @@ export async function warmNifty500(): Promise<void> {
         pChange: p.pChange ?? 0,
         open: p.open ?? p.lastPrice,
         close: p.previousClose ?? p.lastPrice,
-        high: p.high ?? p.lastPrice,
-        low: p.low ?? p.lastPrice,
-        volume: raw.tradeInfo?.totalTradedVolume ?? 0,
-        totalTradedVolume: raw.tradeInfo?.totalTradedVolume ?? 0,
+        high: p.lastPrice,
+        low: p.lastPrice,
+        volume: 0,
+        totalTradedVolume: 0,
         yearHigh: p.weekHighLow?.max ?? p.lastPrice,
         yearLow: p.weekHighLow?.min ?? p.lastPrice,
         issuedSize: issuedSize || undefined,
