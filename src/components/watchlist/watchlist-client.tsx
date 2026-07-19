@@ -178,13 +178,12 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
     setDragState({ draggingIndex: null, overIndex: null });
 
     // Persist to server
-    const orderPayload = newOrder.map((s, i) => ({ id: s.id!, position: i }));
+    const orderPayload = newOrder.map((s, i) => ({ ...s, position: i }));
     try {
       await reorderMutation.mutateAsync(orderPayload);
     } catch {
       setStocks(null); // Rollback on failure
     }
-  };
 
   const handleDragEnd = () => {
     setDragState({ draggingIndex: null, overIndex: null });
@@ -221,7 +220,7 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
       <div className="flex flex-col items-center justify-center flex-1 gap-3 p-8">
         <AlertCircle className="size-8 text-destructive/50" />
         <p className="text-sm text-muted-foreground text-center">
-          {error?.message ?? "Failed to load watchlist"}
+          {error ?? "Failed to load watchlist"}
         </p>
         <Button
           variant="outline"
