@@ -125,15 +125,3 @@ src/
 └── middleware.ts             # Route protection
 ```
 
-## Trade Setup Types
-
-| Code | Full Name |
-|------|-----------|
-| QUICK_TRADE | Quick / Intraday trade |
-| HIT | Half In Trade |
-| DIT | Daily In Trade |
-| WIT | Weekly In Trade |
-| MIT | Monthly In Trade |
-| QIT | Quarterly In Trade |
-| HYIT | Half Yearly In Trade |
-| YIT | Yearly In Trade |
