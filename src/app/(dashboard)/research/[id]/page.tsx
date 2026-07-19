@@ -5,13 +5,14 @@ import { db } from "@/lib/db";
 import { BoardCanvasClient } from "@/components/research/board-canvas-client";
 
 interface BoardPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: BoardPageProps): Promise<Metadata> {
+  const { id } = await params;
   try {
     const board = await db.research.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { title: true },
     });
     if (board) return { title: board.title };
@@ -22,12 +23,14 @@ export async function generateMetadata({ params }: BoardPageProps): Promise<Meta
 }
 
 export default async function BoardPage({ params }: BoardPageProps) {
+  const { id } = await params;
+
   const session = await auth();
   if (!session?.user) redirect("/");
 
   // Verify ownership server-side before rendering
   const board = await db.research.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { userId: true },
   });
 
@@ -38,7 +41,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
   return (
     // Full-height layout — tldraw needs to fill the entire viewport
     <div className="flex flex-col h-full">
-      <BoardCanvasClient boardId={params.id} />
+      <BoardCanvasClient boardId={id} />
     </div>
   );
 }
