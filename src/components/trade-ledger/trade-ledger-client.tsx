@@ -184,11 +184,7 @@ export function TradeLedgerClient() {
         <LedgerHeader stats={null} onAdd={() => {}} />
         <div className="flex-1 p-4 flex flex-col gap-2">
           {Array.from({ length: 14 }, (_, i) => (
-            <Skeleton
-              key={i}
-              className="h-12 w-full rounded"
-              style={{ opacity: 1 - i * 0.05 }}
-            />
+            <Skeleton key={i} className="h-12 w-full rounded" />
           ))}
         </div>
       </div>
