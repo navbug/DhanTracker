@@ -23,13 +23,15 @@ async function verifyOwnership(watchlistId: string, userId: string | undefined) 
   return wl;
 }
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // ── GET /api/watchlists/[id]/stocks ──────────────────────────────────────────
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const {id} = await params;
+    const { id } = await params;
     const user = await requireAuth();
     const owned = await verifyOwnership(id, user.id);
     if (!owned) {
@@ -56,10 +58,10 @@ export async function GET(
 // ── POST /api/watchlists/[id]/stocks — add a stock ───────────────────────────
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const {id} = await params;
+    const { id } = await params;
     const user = await requireAuth();
     const owned = await verifyOwnership(id, user.id);
     if (!owned) {
