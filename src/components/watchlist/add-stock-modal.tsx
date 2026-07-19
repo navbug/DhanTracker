@@ -36,6 +36,7 @@ export function AddStockModal({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [addedSymbols, setAddedSymbols] = useState<Set<string>>(new Set());
+  const [loadingSymbol, setLoadingSymbol] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addMutation = useAddStock(watchlistId);
 
@@ -50,7 +51,7 @@ export function AddStockModal({
       setIsSearching(true);
       try {
         const res = await fetch(
-          `/api/stocks/search?q=${encodeURIComponent(query.trim())}`
+          `/api/stocks/search?q=${encodeURIComponent(query.trim())}`,
         );
         const json = await res.json();
         if (json.success) setResults(json.data);
@@ -78,9 +79,14 @@ export function AddStockModal({
   const handleAdd = async (symbol: string) => {
     if (addedSymbols.has(symbol) || existingSymbols.includes(symbol)) return;
 
-    await addMutation.mutateAsync(symbol);
-    setAddedSymbols((prev) => new Set([...prev, symbol]));
-    // Don't close — let user add multiple stocks (matches sketch behavior)
+    setLoadingSymbol(symbol);
+    try {
+      await addMutation.mutateAsync(symbol);
+      setAddedSymbols((prev) => new Set([...prev, symbol]));
+      // Don't close — let user add multiple stocks (matches sketch behavior)
+    } finally {
+      setLoadingSymbol(null);
+    }
   };
 
   return (
@@ -98,11 +104,7 @@ export function AddStockModal({
           <Input
             ref={inputRef}
             leftIcon={
-              isSearching ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Search />
-              )
+              isSearching ? <Loader2 className="animate-spin" /> : <Search />
             }
             placeholder="Search by symbol or company name..."
             value={query}
@@ -136,16 +138,14 @@ export function AddStockModal({
           {results.map((result) => {
             const isInWatchlist = existingSymbols.includes(result.symbol);
             const justAdded = addedSymbols.has(result.symbol);
-            const isLoading =
-              addMutation.isPending &&
-              addMutation.variables === result.symbol;
+            const isLoading = loadingSymbol === result.symbol;
 
             return (
               <div
                 key={result.symbol}
                 className={cn(
                   "flex items-center justify-between px-5 py-2.5 hover:bg-accent/50 transition-colors",
-                  (isInWatchlist || justAdded) && "opacity-60"
+                  (isInWatchlist || justAdded) && "opacity-60",
                 )}
               >
                 <div className="flex flex-col gap-0.5 min-w-0">
@@ -171,7 +171,7 @@ export function AddStockModal({
                     "flex items-center justify-center w-7 h-7 rounded-md border transition-all shrink-0 ml-3",
                     isInWatchlist || justAdded
                       ? "bg-profit/10 border-profit/20 text-profit cursor-default"
-                      : "border-border hover:bg-primary hover:border-primary hover:text-white cursor-pointer"
+                      : "border-border hover:bg-primary hover:border-primary hover:text-white cursor-pointer",
                   )}
                 >
                   {isLoading ? (
@@ -192,7 +192,8 @@ export function AddStockModal({
           <p className="text-xs text-muted-foreground">
             {addedSymbols.size > 0 ? (
               <span className="text-profit font-medium">
-                ✓ {addedSymbols.size} stock{addedSymbols.size !== 1 ? "s" : ""} added
+                ✓ {addedSymbols.size} stock{addedSymbols.size !== 1 ? "s" : ""}{" "}
+                added
               </span>
             ) : (
               "Click + to add stocks without closing this window"
