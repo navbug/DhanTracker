@@ -564,11 +564,10 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
         </div>
       );
     }
-
-    return (
-      <div className="flex flex-col items-center justify-center flex-1 py-16 gap-2">
-        <p className="text-sm text-muted-foreground">No stocks to display</p>
-      </div>
-    );
   }
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 py-16 gap-2">
+      <p className="text-sm text-muted-foreground">No stocks to display</p>
+    </div>
+  );
 }
