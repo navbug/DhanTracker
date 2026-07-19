@@ -113,8 +113,8 @@ export interface Trade {
   target: number;
   qty: number;
   outcome: TradeOutcome;
-  timeTaken?: string;
-  remark?: string;
+  timeTaken?: string | null;
+  remark?: string | null;
   screenshots: string[];
   pnl: number | null;
   exitPrice?: number | null;
