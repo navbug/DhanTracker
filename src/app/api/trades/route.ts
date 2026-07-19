@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client";
 const createTradeSchema = z.object({
   date: z.string().datetime({ offset: true }).or(z.string().date()),
   stock: z.string().min(1).max(30).transform((s) => s.toUpperCase().trim()),
-  tradeSetup: z.enum(["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HVIT", "YIT"]),
+  tradeSetup: z.enum(["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HYIT", "YIT"]),
   priority: z.enum(["MUST_TRADE", "HIGH", "MEDIUM", "LOW"]),
   entry: z.number().positive("Entry must be positive"),
   sl: z.number().positive("Stop loss must be positive"),

@@ -74,7 +74,7 @@ const OUTCOME_ACTIVE_COLORS: Partial<Record<"all" | "open" | "won" | "lost", str
 };
 
 const ALL_SETUPS: Array<TradeSetup | "all"> = [
-  "all", "QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HVIT", "YIT",
+  "all", "QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HYIT", "YIT",
 ];
 const SETUP_LABELS_WITH_ALL: Record<TradeSetup | "all", string> = {
   all: "All Setups",

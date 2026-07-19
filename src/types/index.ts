@@ -205,7 +205,6 @@ export const TRADE_SETUP_LABELS: Record<TradeSetup, string> = {
   MIT: "MIT",
   QIT: "QIT",
   HYIT: "HYIT",
-  HVIT: "HYIT", // DB enum value, display as HYIT
   YIT: "YIT",
 };
 
@@ -217,7 +216,6 @@ export const TRADE_SETUP_DESCRIPTIONS: Record<TradeSetup, string> = {
   MIT: "Monthly Income Trade",
   QIT: "Quarterly Income Trade",
   HYIT: "Half Yearly Income Trade",
-  HVIT: "Half Yearly Income Trade", // DB alias
   YIT: "Yearly Income Trade",
 };
 

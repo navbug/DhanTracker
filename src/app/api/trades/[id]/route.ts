@@ -62,7 +62,7 @@ export async function GET(
 const updateTradeSchema = z.object({
   date: z.string().optional(),
   stock: z.string().min(1).max(30).transform((s) => s.toUpperCase().trim()).optional(),
-  tradeSetup: z.enum(["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HVIT", "YIT"]).optional(),
+  tradeSetup: z.enum(["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HYIT", "YIT"]).optional(),
   priority: z.enum(["MUST_TRADE", "HIGH", "MEDIUM", "LOW"]).optional(),
   entry: z.number().positive().optional(),
   sl: z.number().positive().optional(),

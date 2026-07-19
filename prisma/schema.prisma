@@ -148,7 +148,7 @@ enum TradeSetup {
   WIT         // Weekly In Trade
   MIT         // Monthly In Trade
   QIT         // Quarterly In Trade
-  HVIT        // Half Yearly In Trade
+  HYIT        // Half Yearly In Trade
   YIT         // Yearly In Trade
 }
 

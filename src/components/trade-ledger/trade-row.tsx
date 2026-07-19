@@ -40,7 +40,6 @@ const SETUP_BADGE: Record<string, string> = {
   MIT:         "bg-emerald-50 text-emerald-700 border-emerald-200",
   QIT:         "bg-pink-50    text-pink-700    border-pink-200",
   HYIT:        "bg-orange-50  text-orange-700  border-orange-200",
-  HVIT:        "bg-orange-50  text-orange-700  border-orange-200",
   YIT:         "bg-rose-50    text-rose-700    border-rose-200",
 };
 

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import type { TradeSetup } from "@/types";
 
-const ALL_SETUPS: TradeSetup[] = ["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HVIT", "YIT"];
+const ALL_SETUPS: TradeSetup[] = ["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HYIT", "YIT"];
 const WON_OUTCOMES = ["TARGET_HIT", "PARTIAL_PROFIT", "BREAKEVEN", "MANUAL_EXIT"];
 
 /**

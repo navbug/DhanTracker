@@ -3,7 +3,7 @@ import type { Trade, TradeSetup } from "@/types";
 
 // ─── COMPUTED ANALYTICS ───────────────────────────────────────────────────────
 
-const ALL_SETUPS: TradeSetup[] = ["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HVIT", "YIT"];
+const ALL_SETUPS: TradeSetup[] = ["QUICK_TRADE", "HIT", "DIT", "WIT", "MIT", "QIT", "HYIT", "YIT"];
 const WON_OUTCOMES = ["TARGET_HIT", "PARTIAL_PROFIT", "BREAKEVEN", "MANUAL_EXIT"];
 
 export interface TradeAnalytics {
