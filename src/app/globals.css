@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 220 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+    --primary: 218 70% 25%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 220 25% 20%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 20% 94%;
+    --accent-foreground: 218 70% 25%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 20% 91%;
+    --input: 214 20% 91%;
+    --ring: 218 70% 25%;
+    --radius: 0.6rem;
+    --chart-1: 218 70% 35%;
+    --chart-2: 160 65% 38%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: hsl(218 70% 25% / 0.15);
+    color: hsl(218 70% 20%);
+  }
+}
+
+@layer components {
+  /* ── STOCK TABLE ─────────────────────────────────────────── */
+  .stock-table-row {
+    @apply grid border-b border-border/50 hover:bg-accent/50 transition-colors duration-100;
+  }
+
+  /* ── SHIMMER LOADING ─────────────────────────────────────── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--accent)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ── PROFIT / LOSS BADGES ────────────────────────────────── */
+  .badge-profit {
+    @apply bg-profit/10 text-profit border border-profit/20 rounded-md px-2 py-0.5 text-xs font-medium tabular-nums;
+  }
+
+  .badge-loss {
+    @apply bg-loss/10 text-loss border border-loss/20 rounded-md px-2 py-0.5 text-xs font-medium tabular-nums;
+  }
+
+  .badge-neutral {
+    @apply bg-muted text-muted-foreground border border-border rounded-md px-2 py-0.5 text-xs font-medium;
+  }
+
+  /* ── GLASS CARD ──────────────────────────────────────────── */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/60 shadow-card;
+  }
+
+  /* ── NUMBER DISPLAY ──────────────────────────────────────── */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* ── MARKET STATUS INDICATOR ─────────────────────────────── */
+  .market-dot-open {
+    @apply w-2 h-2 rounded-full bg-profit;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .market-dot-closed {
+    @apply w-2 h-2 rounded-full bg-loss/70;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────────────── */
+  .sidebar-item {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-150 cursor-pointer;
+  }
+
+  .sidebar-item.active {
+    @apply bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary;
+  }
+
+  /* ── LANDING PAGE ────────────────────────────────────────── */
+  .landing-gradient {
+    background: radial-gradient(
+        ellipse 80% 60% at 20% -10%,
+        hsl(218 70% 25% / 0.08) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 60% 50% at 80% 100%,
+        hsl(160 65% 38% / 0.05) 0%,
+        transparent 60%
+      ),
+      hsl(var(--background));
+  }
+}
+
+@layer utilities {
+  /* Prevent text selection on UI elements */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Numeric font feature */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ── MODAL BACKDROP ─────────────────────────────────────────────────────── */
+[data-state="open"] > [data-radix-popper-content-wrapper] {
+  animation: fade-in 0.15s ease-out;
+}
+
+/* tldraw customization */
+.tl-container {
+  font-family: var(--font-dm-sans) !important;
+}
