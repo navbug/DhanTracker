@@ -15,10 +15,10 @@ const reorderSchema = z.object({
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const {id} = await params;
+    const { id } = await params;
     const user = await requireAuth();
 
     // Verify ownership
