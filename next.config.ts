@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: ["localhost:3000", "https://stellular-bubblegum-529a2f.netlify.app"],
     },
   },
 };

@@ -3,7 +3,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "DhanTracker <noreply@dhantracker.in>";
-const APP_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://stellular-bubblegum-529a2f.netlify.app";
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`;
