@@ -233,6 +233,8 @@ export const TRADE_OUTCOME_LABELS: Record<TradeOutcome, string> = {
   TARGET_HIT: "Target Hit",
   SL_HIT: "SL Hit",
   PARTIAL_PROFIT: "Partial Profit",
+  BREAKEVEN: "Breakeven",
+  MANUAL_EXIT: "Manual Exit",
 };
 
 export const PREDEFINED_WATCHLISTS: PredefinedWatchlistMeta[] = [
