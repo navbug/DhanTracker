@@ -15,6 +15,9 @@ const upsertSchema = z.object({
 export async function GET() {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     const notes = await db.stockNote.findMany({
       where: { userId: user.id },
@@ -35,6 +38,10 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth();
+    if (!user.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const parsed = upsertSchema.safeParse(body);
