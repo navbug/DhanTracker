@@ -28,8 +28,8 @@ export async function PUT(request: NextRequest) {
     const { filename, contentType } = parsed.data;
 
     // Check env vars
-    const bucket = process.env.AWS_S3_BUCKET_NAME;
-    const region = process.env.AWS_REGION;
+    const bucket = process.env.AWS_S3_BUCKET_NAME_;
+    const region = process.env.AWS_REGION_;
     if (!bucket || !region) {
       // In dev without S3 configured, return a mock URL
       if (process.env.NODE_ENV === "development") {
@@ -55,8 +55,8 @@ export async function PUT(request: NextRequest) {
     const s3 = new S3Client({
       region,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID_!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY_!,
       },
     });
 
