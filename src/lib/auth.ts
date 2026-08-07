@@ -1,10 +1,11 @@
+// lib/auth.ts
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { authConfig } from "@/auth.config";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -12,17 +13,10 @@ const loginSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/",
-    error: "/",
-  },
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
+    ...authConfig.providers,
     Credentials({
       name: "Credentials",
       credentials: {
@@ -53,32 +47,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.image = user.image;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.image = token.image as string | null;
-      }
-      return session;
-    },
-  },
   events: {
     async signIn({ user, account }) {
-      // Update user name from OAuth provider if name not yet set
       if (account?.provider === "google" && user.id && user.name) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { name: user.name },
-        }).catch(() => {}); // Silently fail — user might already have name
+        await db.user
+          .update({
+            where: { id: user.id },
+            data: { name: user.name },
+          })
+          .catch(() => {});
       }
     },
   },
