@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getAllCachedRaw } from "@/lib/cache";
 import { warmNifty500 } from "@/lib/cache-warmer";
 
@@ -6,22 +6,28 @@ export const maxDuration = 60;
 
 /**
  * GET /api/prices/all
- * Returns ALL cached prices — used once at app boot to populate client Zustand store.
- * Returns raw cache without TTL filtering so boot never gets empty data.
+ * Returns ALL cached prices — used at app boot (and by the client's bounded
+ * retry poll in AppBootstrap) to populate the Zustand price store.
  *
- * The background cache warmer (kicked off from instrumentation.ts) may not
- * have finished yet on a cold instance — or, on serverless platforms, may
- * have been frozen mid-fetch between invocations. If the cache is empty when
- * this route is hit, we do a real, awaited warm-up here before responding,
- * so the very first request to a fresh instance still gets real data instead
- * of silently returning {} and leaving the client with nothing.
+ * IMPORTANT: this route must respond fast and must NOT block on NSE.
+ * Vercel serverless functions have a hard execution ceiling (60s on Hobby
+ * without Fluid Compute), and warming all 500 Nifty stocks can occasionally
+ * exceed that under real-world NSE latency. An earlier version of this route
+ * awaited the warm-up inline before responding — which meant that on a cold
+ * cache, the ENTIRE boot request could hit that ceiling and get killed by
+ * Vercel, returning nothing at all (worse than returning a partial cache).
+ *
+ * Fix: always return whatever's currently cached immediately. If the cache
+ * is cold, kick the warm-up off via after() — Next's supported way to keep
+ * work running after the response has been sent — instead of awaiting it
+ * here. The client (AppBootstrap) retries this endpoint a few times with
+ * backoff if it came back empty, to pick up the warmed data once it lands.
  */
 export async function GET() {
-  let prices = getAllCachedRaw();
+  const prices = getAllCachedRaw();
 
   if (Object.keys(prices).length === 0) {
-    await warmNifty500().catch(() => {});
-    prices = getAllCachedRaw();
+    after(() => warmNifty500().catch(() => {}));
   }
 
   return NextResponse.json({ success: true, data: prices });

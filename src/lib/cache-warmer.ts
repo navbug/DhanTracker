@@ -14,7 +14,7 @@ import { NIFTY500_STOCKS } from "@/data/indices/index";
 import type { StockPrice } from "@/types";
 
 const INTERVAL_MS = 15 * 60 * 1000;
-const BATCH_SIZE = 40; // concurrent requests per batch — keeps us well under NSE's rate limits
+const BATCH_SIZE = 50; // concurrent requests per batch — keeps us well under NSE's rate limits
 const BATCH_PAUSE_MS = 150; // brief pause between batches so we don't hammer NSE in one burst
 
 const g = globalThis as unknown as {
