@@ -7,6 +7,7 @@ import { useResearchStore } from "@/store/research-store";
 import { usePriceStore } from "@/store/price-store";
 import { useNotesStore } from "@/store/notes-store";
 import { usePricePoller } from "@/hooks/use-prices";
+import { NIFTY500_HEALTHY_COUNT } from "@/lib/utils";
 import type { Trade, StockPrice } from "@/types";
 import type { ResearchBoard } from "@/hooks/use-research";
 
@@ -21,7 +22,6 @@ import type { ResearchBoard } from "@/hooks/use-research";
 // pick up that data once it lands, instead of leaving the watchlist showing
 // dashes until the next 15-min poll or a manual refresh click.
 const PRICE_RETRY_DELAYS_MS = [4000, 8000, 15000, 25000];
-const HEALTHY_PRICE_COUNT = 400; // out of ~500 Nifty stocks — "good enough", stop polling
 
 export function AppBootstrap() {
   const hasFetched = useRef(false);
@@ -48,7 +48,7 @@ export function AppBootstrap() {
         if (json?.success) {
           const data = json.data as Record<string, StockPrice>;
           if (Object.keys(data).length > 0) mergePrices(data);
-          if (Object.keys(data).length >= HEALTHY_PRICE_COUNT) return; // caught up
+          if (Object.keys(data).length >= NIFTY500_HEALTHY_COUNT) return; // caught up
         }
       } catch {
         // ignore — just try again on the next scheduled attempt
@@ -103,7 +103,7 @@ export function AppBootstrap() {
 
       // Cache was cold at boot — its warm-up is running in the background.
       // Poll for it to land instead of waiting on the next 15-min cycle.
-      if (priceCount < HEALTHY_PRICE_COUNT) {
+      if (priceCount < NIFTY500_HEALTHY_COUNT) {
         pollForMorePrices(0);
       }
     }

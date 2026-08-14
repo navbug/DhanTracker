@@ -105,6 +105,15 @@ export function getChangeColor(value: number): string {
 
 // ─── MARKET HOURS ────────────────────────────────────────────────────────────
 
+// "Good enough" cached-price count out of ~500 Nifty stocks — shared between
+// the server-side cache warmer (lib/cache-warmer.ts) and the client boot
+// retry poll (components/layout/app-bootstrap.tsx). Lives here rather than
+// in cache-warmer.ts because that module dynamically imports the Node-only
+// stock-nse-india package — a client component importing anything from it,
+// even just a constant, risks pulling that server-only module into the
+// client bundle graph.
+export const NIFTY500_HEALTHY_COUNT = 400;
+
 export function isMarketOpen(): boolean {
   const now = new Date();
   const istOffset = 5.5 * 60; // IST is UTC+5:30
