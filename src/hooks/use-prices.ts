@@ -56,25 +56,12 @@ export function usePricePoller() {
       }
       return incoming;
     },
-    // Seed as "fresh as of right now" so React Query does NOT perform an
-    // eager fetch on mount. refetchOnMount: false alone does not achieve this —
-    // it only skips refetching data that already exists in the query cache,
-    // and on a fresh page load there is no prior cache, so the query function
-    // would still fire immediately regardless. That meant every page load was
-    // triggering a SECOND full 500-stock NSE fetch (via /api/prices/refresh)
-    // on top of the server's own background cache warm — two full concurrent
-    // bursts at once, which is what caused the multi-minute delay and the
-    // inconsistent missing prices. With initialData marked fresh, this query
-    // now only runs on the refetchInterval below (market hours) or the
-    // manual Refresh button (useRefreshPrices).
-    initialData: {} as Record<string, StockPrice>,
-    initialDataUpdatedAt: Date.now(),
     enabled: true,
     staleTime: POLL_INTERVAL_MS,
     refetchInterval: marketOpen ? POLL_INTERVAL_MS : false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: false,  // boot fetch (via AppBootstrap) already populated Zustand
     retry: 3,
     retryDelay: 5000,
   });

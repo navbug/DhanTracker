@@ -3,8 +3,6 @@ import { requireAuth } from "@/lib/auth";
 import { warmNifty500 } from "@/lib/cache-warmer";
 import { getAllCachedRaw } from "@/lib/cache";
 
-export const maxDuration = 60;
-
 /**
  * POST /api/prices/refresh
  * Forces a fresh NSE fetch for all 500 stocks, updates server cache, returns result.
