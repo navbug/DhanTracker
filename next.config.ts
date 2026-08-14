@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["https://stellular-bubblegum-529a2f.netlify.app"],
+      allowedOrigins: ["https://dhan-tracker.vercel.app"],
     },
   },
 };
