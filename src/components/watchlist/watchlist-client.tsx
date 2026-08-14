@@ -233,209 +233,210 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
     } catch {
       setStocks(null); // Rollback on failure
     }
-
-    const handleDragEnd = () => {
-      setDragState({ draggingIndex: null, overIndex: null });
-    };
-
-    // ── Delete stock ───────────────────────────────────────
-    const handleDelete = async (stock: WatchlistStock) => {
-      if (!stock.id) return;
-      await removeMutation.mutateAsync(stock.id);
-      setStocks(null); // Reset local order
-    };
-
-    // ── Refresh prices ─────────────────────────────────────
-    const handleRefresh = () => {
-      refreshPrices();
-      toast.info("Refreshing prices...");
-    };
-
-    // ── Loading state ──────────────────────────────────────
-    if (isLoading) {
-      return (
-        <div className="flex flex-col flex-1">
-          <WatchlistPageHeader
-            name="Loading..."
-            isCustom={false}
-            stockCount={0}
-          />
-          <div className="flex-1 overflow-hidden bg-white border-t border-border">
-            <WatchlistLoadingSkeleton rows={15} />
-          </div>
-        </div>
-      );
-    }
-
-    // ── Error state ────────────────────────────────────────
-    if (error || !watchlist) {
-      return (
-        <div className="flex flex-col items-center justify-center flex-1 gap-3 p-8">
-          <AlertCircle className="size-8 text-destructive/50" />
-          <p className="text-sm text-muted-foreground text-center">
-            {error ?? "Failed to load watchlist"}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </Button>
-        </div>
-      );
-    }
-
-    const existingSymbols = baseStocks.map((s) => s.symbol);
-
-    return (
-      <>
-        <div className="flex flex-col h-full">
-          {/* ── Header ── */}
-          <WatchlistPageHeader
-            name={watchlist.name}
-            isCustom={isCustom}
-            stockCount={displayStocks.length}
-            totalCount={baseStocks.length}
-            pricesFetching={pricesFetching}
-            onAddStock={() => setAddStockOpen(true)}
-            onRefresh={handleRefresh}
-          />
-
-          {/* ── Toolbar: search + info ── */}
-          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-white">
-            <Input
-              leftIcon={<Search />}
-              placeholder="Search stocks..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 max-w-xs text-xs"
-            />
-            <div className="ml-auto flex items-center gap-2">
-              <PriceRefreshInfo pricesFetching={pricesFetching} />
-            </div>
-          </div>
-
-          {/* ── Table header ── */}
-          <WatchlistTableHeader
-            isCustom={isCustom}
-            sortField={sortField}
-            sortDir={sortDir}
-            onSort={handleSort}
-          />
-
-          {/* ── Virtual stock list ── */}
-          {displayStocks.length === 0 ? (
-            <EmptyState
-              isCustom={isCustom}
-              search={search}
-              onAddStock={() => setAddStockOpen(true)}
-            />
-          ) : (
-            <div
-              ref={parentRef}
-              className="flex-1 overflow-auto bg-white"
-              style={{ contain: "strict" }}
-            >
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: "100%",
-                  position: "relative",
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const stock = displayStocks[virtualRow.index];
-                  const price = (priceMap as Record<string, StockPrice>)[
-                    stock.symbol
-                  ];
-                  // Enrich stock metadata from live price data when available
-                  const enrichedStock = price
-                    ? {
-                        ...stock,
-                        companyName: stock.companyName ?? price.companyName,
-                        sector: stock.sector ?? price.sector,
-                        marketCap: price.marketCap ?? stock.marketCap,
-                      }
-                    : stock;
-                  const isDragging =
-                    dragState.draggingIndex === virtualRow.index;
-                  const isDragOver =
-                    dragState.overIndex === virtualRow.index && !isDragging;
-
-                  return (
-                    <div
-                      key={stock.symbol}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                      draggable={isCustom}
-                      onDragStart={() => handleDragStart(virtualRow.index)}
-                      onDragOver={(e) => handleDragOver(e, virtualRow.index)}
-                      onDrop={() => handleDrop(virtualRow.index)}
-                      onDragEnd={handleDragEnd}
-                      className={cn(
-                        isDragOver &&
-                          "outline outline-1 outline-primary/30 bg-primary/5",
-                      )}
-                    >
-                      <StockRow
-                        stock={enrichedStock}
-                        price={price}
-                        index={virtualRow.index}
-                        isCustom={isCustom}
-                        note={notes[enrichedStock.symbol.toUpperCase()]}
-                        isLoading={pricesLoading && !price}
-                        isDragging={isDragging}
-                        onNoteClick={
-                          isCustom
-                            ? setNotesModal.bind(null, { stock })
-                            : undefined
-                        }
-                        onDelete={isCustom ? handleDelete : undefined}
-                        dragHandleProps={
-                          isCustom
-                            ? {
-                                onMouseDown: () => {}, // handled by draggable div above
-                              }
-                            : undefined
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Modals ── */}
-        {isCustom && (
-          <AddStockModal
-            open={addStockOpen}
-            onClose={() => setAddStockOpen(false)}
-            watchlistId={watchlistId}
-            existingSymbols={existingSymbols}
-          />
-        )}
-
-        {notesModal && (
-          <NotesModal
-            open={true}
-            onClose={() => setNotesModal(null)}
-            symbol={notesModal.stock.symbol}
-            initialNote={notes[notesModal.stock.symbol.toUpperCase()] ?? ""}
-          />
-        )}
-      </>
-    );
   };
 
+  const handleDragEnd = () => {
+    setDragState({ draggingIndex: null, overIndex: null });
+  };
+
+  // ── Delete stock ───────────────────────────────────────
+  const handleDelete = async (stock: WatchlistStock) => {
+    if (!stock.id) return;
+    await removeMutation.mutateAsync(stock.id);
+    setStocks(null); // Reset local order
+  };
+
+  // ── Refresh prices ─────────────────────────────────────
+  const handleRefresh = () => {
+    refreshPrices();
+    toast.info("Refreshing prices...");
+  };
+
+  // ── Loading state ──────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="flex flex-col flex-1">
+        <WatchlistPageHeader
+          name="Loading..."
+          isCustom={false}
+          stockCount={0}
+        />
+        <div className="flex-1 overflow-hidden bg-white border-t border-border">
+          <WatchlistLoadingSkeleton rows={15} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error state ────────────────────────────────────────
+  if (error || !watchlist) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 gap-3 p-8">
+        <AlertCircle className="size-8 text-destructive/50" />
+        <p className="text-sm text-muted-foreground text-center">
+          {error ?? "Failed to load watchlist"}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  const existingSymbols = baseStocks.map((s) => s.symbol);
+
+  return (
+    <>
+      <div className="flex flex-col h-full">
+        {/* ── Header ── */}
+        <WatchlistPageHeader
+          name={watchlist.name}
+          isCustom={isCustom}
+          stockCount={displayStocks.length}
+          totalCount={baseStocks.length}
+          pricesFetching={pricesFetching}
+          onAddStock={() => setAddStockOpen(true)}
+          onRefresh={handleRefresh}
+        />
+
+        {/* ── Toolbar: search + info ── */}
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-white">
+          <Input
+            leftIcon={<Search />}
+            placeholder="Search stocks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 max-w-xs text-xs"
+          />
+          <div className="ml-auto flex items-center gap-2">
+            <PriceRefreshInfo pricesFetching={pricesFetching} />
+          </div>
+        </div>
+
+        {/* ── Table header ── */}
+        <WatchlistTableHeader
+          isCustom={isCustom}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={handleSort}
+        />
+
+        {/* ── Virtual stock list ── */}
+        {displayStocks.length === 0 ? (
+          <EmptyState
+            isCustom={isCustom}
+            search={search}
+            onAddStock={() => setAddStockOpen(true)}
+          />
+        ) : (
+          <div
+            ref={parentRef}
+            className="flex-1 overflow-auto bg-white"
+            style={{ contain: "strict" }}
+          >
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const stock = displayStocks[virtualRow.index];
+                const price = (priceMap as Record<string, StockPrice>)[
+                  stock.symbol
+                ];
+                // Enrich stock metadata from live price data when available
+                const enrichedStock = price
+                  ? {
+                      ...stock,
+                      companyName: stock.companyName ?? price.companyName,
+                      sector: stock.sector ?? price.sector,
+                      marketCap: price.marketCap ?? stock.marketCap,
+                    }
+                  : stock;
+                const isDragging =
+                  dragState.draggingIndex === virtualRow.index;
+                const isDragOver =
+                  dragState.overIndex === virtualRow.index && !isDragging;
+
+                return (
+                  <div
+                    key={stock.symbol}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    draggable={isCustom}
+                    onDragStart={() => handleDragStart(virtualRow.index)}
+                    onDragOver={(e) => handleDragOver(e, virtualRow.index)}
+                    onDrop={() => handleDrop(virtualRow.index)}
+                    onDragEnd={handleDragEnd}
+                    className={cn(
+                      isDragOver &&
+                        "outline outline-1 outline-primary/30 bg-primary/5",
+                    )}
+                  >
+                    <StockRow
+                      stock={enrichedStock}
+                      price={price}
+                      index={virtualRow.index}
+                      isCustom={isCustom}
+                      note={notes[enrichedStock.symbol.toUpperCase()]}
+                      isLoading={pricesLoading && !price}
+                      isDragging={isDragging}
+                      onNoteClick={
+                        isCustom
+                          ? setNotesModal.bind(null, { stock })
+                          : undefined
+                      }
+                      onDelete={isCustom ? handleDelete : undefined}
+                      dragHandleProps={
+                        isCustom
+                          ? {
+                              onMouseDown: () => {}, // handled by draggable div above
+                            }
+                          : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Modals ── */}
+      {isCustom && (
+        <AddStockModal
+          open={addStockOpen}
+          onClose={() => setAddStockOpen(false)}
+          watchlistId={watchlistId}
+          existingSymbols={existingSymbols}
+        />
+      )}
+
+      {notesModal && (
+        <NotesModal
+          open={true}
+          onClose={() => setNotesModal(null)}
+          symbol={notesModal.stock.symbol}
+          initialNote={notes[notesModal.stock.symbol.toUpperCase()] ?? ""}
+        />
+      )}
+    </>
+  );
+
   // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
+  // (function declarations are hoisted, so they can be defined after the return above)
 
   function WatchlistPageHeader({
     name,
@@ -564,10 +565,12 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
         </div>
       );
     }
+
+    // Fallback for a predefined index with no stocks (shouldn't normally happen)
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 py-16 gap-2">
+        <p className="text-sm text-muted-foreground">No stocks to display</p>
+      </div>
+    );
   }
-  return (
-    <div className="flex flex-col items-center justify-center flex-1 py-16 gap-2">
-      <p className="text-sm text-muted-foreground">No stocks to display</p>
-    </div>
-  );
 }
