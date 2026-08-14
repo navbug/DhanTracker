@@ -41,6 +41,7 @@ const g = globalThis as unknown as {
   warmStatus?: "warming" | "warm" | "failed" | "idle";
   warmInFlight?: Promise<void>;
   warmCursor?: number; // index into NIFTY500_STOCKS to resume from next call
+  lastSampleErrors?: string[];
 };
 
 async function warmNifty500Impl(): Promise<void> {
@@ -60,6 +61,24 @@ async function warmNifty500Impl(): Promise<void> {
 
     // One retry per symbol — a lot of NSE failures are transient
     // (session/cookie hiccups, brief connection resets under load).
+    // Surface WHY requests are failing — log the first few distinct failures
+    // in full instead of silently swallowing everything into null. Without
+    // this we can see 0/500 cached but have no way to tell "NSE is blocking
+    // us" apart from "something in our own code is broken."
+    const sampleErrors: string[] = [];
+    const MAX_SAMPLE_ERRORS = 5;
+
+    function describeError(err: unknown): string {
+      if (err && typeof err === "object") {
+        const anyErr = err as { message?: string; code?: string; response?: { status?: number } };
+        const status = anyErr.response?.status;
+        const code = anyErr.code;
+        const message = anyErr.message;
+        return `status=${status ?? "n/a"} code=${code ?? "n/a"} message=${message ?? String(err)}`;
+      }
+      return String(err);
+    }
+
     async function fetchOne(
       nse: InstanceType<typeof NseIndia>,
       symbol: string,
@@ -104,7 +123,10 @@ async function warmNifty500Impl(): Promise<void> {
           issuedSize: issuedSize || undefined,
           marketCap: marketCapCr,
         };
-      } catch {
+      } catch (err) {
+        if (sampleErrors.length < MAX_SAMPLE_ERRORS) {
+          sampleErrors.push(`${symbol}: ${describeError(err)}`);
+        }
         if (retry) return fetchOne(nse, symbol, false);
         return null;
       }
@@ -151,6 +173,10 @@ async function warmNifty500Impl(): Promise<void> {
     console.log(
       `[CacheWarmer] Run done: +${cachedThisRun} cached this run (${symbolsSeenThisRun}/${allSymbols.length} symbols attempted), total cache now ${size}/${allSymbols.length}, took ${elapsed}s. Next resume index: ${cursor}.`
     );
+    if (sampleErrors.length > 0) {
+      console.error(`[CacheWarmer] Sample failures this run:\n  ${sampleErrors.join("\n  ")}`);
+    }
+    g.lastSampleErrors = sampleErrors;
   } catch (err) {
     g.warmStatus = "failed";
     console.error("[CacheWarmer] Error:", err);
@@ -214,5 +240,6 @@ export function getCacheWarmerStatus() {
     lastWarmTime: g.lastWarmTime ?? null,
     cacheSize: getCacheStats().size,
     resumeIndex: g.warmCursor ?? 0,
+    sampleErrors: g.lastSampleErrors ?? [],
   };
 }
