@@ -1,6 +1,6 @@
 /**
  * Cache Warmer — runs at server start via instrumentation.ts
- * Fetches all 500 Nifty stocks concurrently, caches price + sector + marketCap in RAM.
+ * Fetches all 500 Nifty stocks in batches of 50, caches price + sector + marketCap in RAM.
  * Refreshes every 15 minutes. One cache shared across all users and watchlists.
  */
 
@@ -10,6 +10,8 @@ import { NIFTY500_STOCKS } from "@/data/indices/index";
 import type { StockPrice } from "@/types";
 
 const INTERVAL_MS = 15 * 60 * 1000;
+const BATCH_SIZE = 50;
+const BATCH_DELAY_MS = 1000; // pause between batches so we don't hammer NSE
 
 const g = globalThis as unknown as {
   cacheWarmerStarted?: boolean;
@@ -17,20 +19,61 @@ const g = globalThis as unknown as {
   warmStatus?: "warming" | "warm" | "failed" | "idle";
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Splits symbols into chunks of BATCH_SIZE and fetches each chunk sequentially,
+ * with a small delay between chunks. Returns results in the same order as `symbols`
+ * so callers can still zip them back up by index.
+ */
+async function fetchDetailsInBatches(
+  symbols: string[],
+  nse: InstanceType<typeof import("stock-nse-india").NseIndia>
+): Promise<PromiseSettledResult<Awaited<ReturnType<typeof nse.getEquityDetails>>>[]> {
+  const allResults: PromiseSettledResult<Awaited<ReturnType<typeof nse.getEquityDetails>>>[] = [];
+  const totalBatches = Math.ceil(symbols.length / BATCH_SIZE);
+
+  for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+    const batchNum = i / BATCH_SIZE + 1;
+    const batch = symbols.slice(i, i + BATCH_SIZE);
+
+    const batchResults = await Promise.allSettled(
+      batch.map((symbol) => nse.getEquityDetails(symbol))
+    );
+    allResults.push(...batchResults);
+
+    console.log(
+      `[CacheWarmer] Batch ${batchNum}/${totalBatches} done (${Math.min(
+        i + BATCH_SIZE,
+        symbols.length
+      )}/${symbols.length} symbols fetched)`
+    );
+
+    // Don't sleep after the final batch
+    if (i + BATCH_SIZE < symbols.length) {
+      await sleep(BATCH_DELAY_MS);
+    }
+  }
+
+  return allResults;
+}
+
 export async function warmNifty500(): Promise<void> {
   const startTime = Date.now();
   g.warmStatus = "warming";
 
   const symbols = NIFTY500_STOCKS.map((s) => s.symbol);
-  console.log(`[CacheWarmer] Starting warm-up for ${symbols.length} symbols...`);
+  console.log(
+    `[CacheWarmer] Starting warm-up for ${symbols.length} symbols in batches of ${BATCH_SIZE}...`
+  );
 
   try {
     const { NseIndia } = await import("stock-nse-india");
     const nse = new NseIndia();
 
-    const results = await Promise.allSettled(
-      symbols.map((symbol) => nse.getEquityDetails(symbol))
-    );
+    const results = await fetchDetailsInBatches(symbols, nse);
 
     const prices: StockPrice[] = [];
 
