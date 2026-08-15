@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCached, setCache } from "@/lib/cache";
 import { isInNifty500 } from "@/data/indices/index";
+import { fetchPooled } from "@/lib/nse-fetch";
 import type { StockPrice } from "@/types";
 
 const requestSchema = z.object({
@@ -44,8 +45,8 @@ export async function POST(request: NextRequest) {
       const { NseIndia } = await import("stock-nse-india");
       const nse = new NseIndia();
 
-      const fetched = await Promise.allSettled(
-        uncached.map((symbol) => nse.getEquityDetails(symbol))
+      const fetched = await fetchPooled(uncached, (symbol) =>
+        nse.getEquityDetails(symbol)
       );
 
       fetched.forEach((r, i) => {
