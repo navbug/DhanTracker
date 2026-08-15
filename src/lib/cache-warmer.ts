@@ -94,10 +94,13 @@ export async function warmNifty500(): Promise<void> {
         ? Math.round((p.lastPrice * issuedSize) / 1e7) / 100
         : undefined;
 
-      // Sector: prefer metadata.sectorName, fall back to info.industry
+      // Sector: NSE's industryInfo.sector is the properly classified field
+      // (info.industry is a broader field and is frequently an empty string —
+      // use || everywhere here, not ??, so blank strings also fall through)
       const sector =
-        raw.info?.industry ??
-        // Fall back to our static index data if NSE doesn't return it
+        raw.industryInfo?.sector ||
+        raw.info?.industry ||
+        // Fall back to our static index data if NSE doesn't return either
         NIFTY500_STOCKS.find((s) => s.symbol === symbol)?.sector;
 
       const companyName =

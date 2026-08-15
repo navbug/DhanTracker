@@ -158,7 +158,7 @@ export const StockRow = memo(function StockRow({
       {/* ── Sector ── */}
       <div className="truncate">
         <span className="text-[11px] text-muted-foreground truncate">
-          {stock.sector ?? "—"}
+          {stock.sector || price?.sector || "—"}
         </span>
       </div>
 

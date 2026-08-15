@@ -17,7 +17,6 @@ import {
   useRefreshPrices,
 } from "@/hooks/use-prices";
 import { useNotesStore } from "@/store/notes-store";
-import { getNifty500Stock } from "@/data/indices/index";
 import {
   StockRow,
   WatchlistTableHeader,
@@ -143,18 +142,12 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
             (priceMap as Record<string, StockPrice>)[b.symbol]?.pChange ??
             -Infinity;
         } else if (sortField === "marketCap") {
-          // Prefer live price data, then the static Nifty 500 dataset
-          // (custom-watchlist WatchlistStock DB rows never have their own
-          // marketCap — only a symbol — so without this fallback every
-          // custom-watchlist stock would sort as if its market cap were 0).
           av =
             (priceMap as Record<string, StockPrice>)[a.symbol]?.marketCap ??
-            getNifty500Stock(a.symbol)?.marketCap ??
             a.marketCap ??
             0;
           bv =
             (priceMap as Record<string, StockPrice>)[b.symbol]?.marketCap ??
-            getNifty500Stock(b.symbol)?.marketCap ??
             b.marketCap ??
             0;
         }
@@ -357,23 +350,15 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                 const price = (priceMap as Record<string, StockPrice>)[
                   stock.symbol
                 ];
-                // Enrich stock metadata: prefer live price data (freshest),
-                // then the static Nifty 500 dataset (reliable, always
-                // available — this is what fills in sector/marketCap for
-                // CUSTOM watchlists, since WatchlistStock rows in the DB
-                // only ever store a symbol, nothing else), then whatever
-                // the stock record itself already has.
-                const staticStock = getNifty500Stock(stock.symbol);
-                const enrichedStock = {
-                  ...stock,
-                  companyName:
-                    stock.companyName ??
-                    price?.companyName ??
-                    staticStock?.companyName,
-                  sector: stock.sector ?? price?.sector ?? staticStock?.sector,
-                  marketCap:
-                    price?.marketCap ?? staticStock?.marketCap ?? stock.marketCap,
-                };
+                // Enrich stock metadata from live price data when available
+                const enrichedStock = price
+                  ? {
+                      ...stock,
+                      companyName: stock.companyName ?? price.companyName,
+                      sector: stock.sector ?? price.sector,
+                      marketCap: price.marketCap ?? stock.marketCap,
+                    }
+                  : stock;
                 const isDragging =
                   dragState.draggingIndex === virtualRow.index;
                 const isDragOver =

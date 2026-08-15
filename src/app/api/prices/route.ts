@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
         // Extract metadata from NSE response
         const companyName = raw.info?.companyName ?? undefined;
-        const sector = undefined;
+        const sector = raw.industryInfo?.sector || raw.info?.industry || undefined;
         const issuedSize: number = 0;
         // marketCap in Cr = (lastPrice × issuedSize) / 1e7
         const marketCap = issuedSize
