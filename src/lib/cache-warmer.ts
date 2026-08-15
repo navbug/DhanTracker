@@ -1,16 +1,21 @@
 /**
  * Cache Warmer — runs at server start via instrumentation.ts
- * Fetches all 500 Nifty stocks in batches of 50, caches price + sector + marketCap in RAM.
+ * Fetches all 500 Nifty stocks from Yahoo Finance in a handful of batched
+ * quote() calls (Yahoo accepts many symbols per call, unlike NSE which
+ * needed one request per symbol), caches price + sector + marketCap in RAM.
  * Refreshes every 15 minutes. One cache shared across all users and watchlists.
  */
 
 import { setCacheBatch, getCacheStats } from "@/lib/cache";
 import { isMarketOpen } from "@/lib/utils";
 import { NIFTY500_STOCKS } from "@/data/indices/index";
-import { fetchPooled } from "@/lib/nse-fetch";
+import { fetchPooled } from "@/lib/fetch-pool";
+import { yahooFinance, toYahooSymbol, quoteToStockPrice } from "@/lib/yahoo-finance";
 import type { StockPrice } from "@/types";
 
 const INTERVAL_MS = 15 * 60 * 1000;
+const CHUNK_SIZE = 100; // symbols per quote() call
+const CHUNK_CONCURRENCY = 3; // concurrent quote() calls in flight
 
 const g = globalThis as unknown as {
   cacheWarmerStarted?: boolean;
@@ -18,79 +23,64 @@ const g = globalThis as unknown as {
   warmStatus?: "warming" | "warm" | "failed" | "idle";
 };
 
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export async function warmNifty500(): Promise<void> {
   const startTime = Date.now();
   g.warmStatus = "warming";
 
   const symbols = NIFTY500_STOCKS.map((s) => s.symbol);
-  console.log(`[CacheWarmer] Starting warm-up for ${symbols.length} symbols...`);
+  const chunks = chunk(symbols, CHUNK_SIZE);
+  console.log(
+    `[CacheWarmer] Starting warm-up for ${symbols.length} symbols (${chunks.length} batched requests)...`
+  );
 
   try {
-    const { NseIndia } = await import("stock-nse-india");
-    const nse = new NseIndia();
-
-    const results = await fetchPooled(
-      symbols,
-      (symbol) => nse.getEquityDetails(symbol),
+    const chunkResults = await fetchPooled(
+      chunks,
+      async (symbolChunk) => {
+        const yahooSymbols = symbolChunk.map(toYahooSymbol);
+        return yahooFinance.quote(yahooSymbols, { return: "object" });
+      },
       {
+        concurrency: CHUNK_CONCURRENCY,
         onProgress: (completed, total) => {
-          if (completed % 50 === 0 || completed === total) {
-            console.log(`[CacheWarmer] ${completed}/${total} symbols fetched`);
-          }
+          console.log(
+            `[CacheWarmer] ${completed}/${total} batches fetched (${Math.min(
+              completed * CHUNK_SIZE,
+              symbols.length
+            )}/${symbols.length} symbols)`
+          );
         },
       }
     );
 
     const prices: StockPrice[] = [];
 
-    results.forEach((r, i) => {
-      if (r.status !== "fulfilled" || !r.value?.priceInfo?.lastPrice) return;
+    chunkResults.forEach((result, chunkIndex) => {
+      if (result.status !== "fulfilled") return;
+      const symbolChunk = chunks[chunkIndex];
+      const quotesBySymbol = result.value;
 
-      const raw = r.value;
-      const p = raw.priceInfo;
-      const symbol = symbols[i];
+      for (const symbol of symbolChunk) {
+        const quote = quotesBySymbol[toYahooSymbol(symbol)];
+        if (!quote) continue; // Yahoo had nothing for this symbol this run
 
-      // issuedSize from tradeInfo or metadata
-      const issuedSize: number = 0;
-
-      // marketCap in Cr. = (lastPrice × issuedSize) / 1e7
-      // issuedSize is total shares, lastPrice is in ₹
-      // ₹ × shares = ₹ total → divide by 1 crore (10^7) to get Cr.
-      const marketCapCr = issuedSize
-        ? Math.round((p.lastPrice * issuedSize) / 1e7) / 100
-        : undefined;
-
-      // Sector: NSE's industryInfo.sector is the properly classified field
-      // (info.industry is a broader field and is frequently an empty string —
-      // use || everywhere here, not ??, so blank strings also fall through)
-      const sector =
-        raw.industryInfo?.sector ||
-        raw.info?.industry ||
-        // Fall back to our static index data if NSE doesn't return either
-        NIFTY500_STOCKS.find((s) => s.symbol === symbol)?.sector;
-
-      const companyName =
-        raw.info?.companyName ??
-        NIFTY500_STOCKS.find((s) => s.symbol === symbol)?.companyName;
-
-      prices.push({
-        symbol,
-        companyName,
-        sector,
-        lastPrice: p.lastPrice,
-        change: p.change ?? 0,
-        pChange: p.pChange ?? 0,
-        open: p.open ?? p.lastPrice,
-        close: p.previousClose ?? p.lastPrice,
-        high: p.lastPrice,
-        low: p.lastPrice,
-        volume: 0,
-        totalTradedVolume: 0,
-        yearHigh: p.weekHighLow?.max ?? p.lastPrice,
-        yearLow: p.weekHighLow?.min ?? p.lastPrice,
-        issuedSize: issuedSize || undefined,
-        marketCap: marketCapCr,
-      });
+        const staticEntry = NIFTY500_STOCKS.find((s) => s.symbol === symbol);
+        const price = quoteToStockPrice(
+          quote,
+          symbol,
+          staticEntry?.sector,
+          staticEntry?.companyName
+        );
+        if (price) prices.push(price);
+      }
     });
 
     if (prices.length > 0) {

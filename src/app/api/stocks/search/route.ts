@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { NIFTY500_STOCKS } from "@/data/indices/index";
+import { yahooFinance, fromYahooSymbol } from "@/lib/yahoo-finance";
 
 /**
  * GET /api/stocks/search?q=RELIANCE
  *
  * Search priority:
- * 1. Filter Nifty 500 static list by symbol/name — instant, no NSE call
- * 2. If query looks like an exact symbol and not found in Nifty 500 — hit NSE API
+ * 1. Filter Nifty 500 static list by symbol/name — instant, no API call
+ * 2. If nothing found — hit Yahoo Finance's search endpoint, filtered to
+ *    NSE-listed results (symbol ending in .NS)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -37,19 +39,27 @@ export async function GET(request: NextRequest) {
       if (results.length >= 15) break;
     }
 
-    // ── Step 2: If nothing found and query is short (likely a symbol), try NSE API ──
+    // ── Step 2: If nothing found, try Yahoo Finance's search, NSE-only ──
     if (results.length === 0) {
       try {
-        const { NseIndia } = await import("stock-nse-india");
-        const nse = new NseIndia();
-        const data = await nse.getEquityDetails(query.toUpperCase());
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const info = (data as any)?.info;
-        if (info?.symbol && !seen.has(info.symbol)) {
-          results.push({
-            symbol: info.symbol,
-            companyName: info.companyName ?? info.symbol,
-          });
+        const searchResults = await yahooFinance.search(query, {
+          region: "IN",
+          quotesCount: 15,
+        });
+
+        for (const quote of searchResults.quotes) {
+          if (!quote.isYahooFinance) continue;
+
+          const yahooSymbol = quote.symbol;
+          if (!yahooSymbol.toUpperCase().endsWith(".NS")) continue;
+
+          const symbol = fromYahooSymbol(yahooSymbol);
+          if (seen.has(symbol)) continue;
+
+          const companyName = quote.longname ?? quote.shortname ?? symbol;
+
+          results.push({ symbol, companyName });
+          seen.add(symbol);
         }
       } catch {
         // Not found — return empty

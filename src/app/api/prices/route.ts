@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCached, setCache } from "@/lib/cache";
-import { isInNifty500 } from "@/data/indices/index";
-import { fetchPooled } from "@/lib/nse-fetch";
+import { NIFTY500_STOCKS } from "@/data/indices/index";
+import {
+  yahooFinance,
+  toYahooSymbol,
+  quoteToStockPrice,
+  fetchSectorLive,
+} from "@/lib/yahoo-finance";
 import type { StockPrice } from "@/types";
 
 const requestSchema = z.object({
@@ -16,7 +21,7 @@ const requestSchema = z.object({
  *
  * Flow:
  * 1. Return cached price if available (Nifty 500 always hits cache)
- * 2. For non-Nifty-500 symbols only: fetch from NSE and cache
+ * 2. For non-Nifty-500 symbols only: fetch from Yahoo Finance and cache
  */
 export async function POST(request: NextRequest) {
   try {
@@ -40,50 +45,52 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Only fetch from NSE for symbols not in cache (non-Nifty-500 custom stocks)
+    // Only fetch for symbols not in cache (non-Nifty-500 custom stocks) —
+    // Yahoo's quote() takes the whole list in one call, unlike NSE which
+    // needed one request per symbol.
     if (uncached.length > 0) {
-      const { NseIndia } = await import("stock-nse-india");
-      const nse = new NseIndia();
-
-      const fetched = await fetchPooled(uncached, (symbol) =>
-        nse.getEquityDetails(symbol)
-      );
-
-      fetched.forEach((r, i) => {
-        if (r.status !== "fulfilled" || !r.value?.priceInfo?.lastPrice) return;
-        const raw = r.value;
-        const p = raw.priceInfo;
-
-        // Extract metadata from NSE response
-        const companyName = raw.info?.companyName ?? undefined;
-        const sector = raw.industryInfo?.sector || raw.info?.industry || undefined;
-        const issuedSize: number = 0;
-        // marketCap in Cr = (lastPrice × issuedSize) / 1e7
-        const marketCap = issuedSize
-          ? Math.round((p.lastPrice * issuedSize) / 1e7) / 100
-          : undefined;
-
-        const price: StockPrice = {
-          symbol: uncached[i],
-          companyName,
-          sector,
-          lastPrice: p.lastPrice,
-          change: p.change ?? 0,
-          pChange: p.pChange ?? 0,
-          open: p.open ?? p.lastPrice,
-          close: p.previousClose ?? p.lastPrice,
-          high: p.lastPrice,
-          low: p.lastPrice,
-          volume: 0,
-          totalTradedVolume: 0,
-          yearHigh: p.weekHighLow?.max ?? p.lastPrice,
-          yearLow: p.weekHighLow?.min ?? p.lastPrice,
-          issuedSize: issuedSize || undefined,
-          marketCap,
-        };
-        setCache(uncached[i], price);
-        result[uncached[i]] = price;
+      const yahooSymbols = uncached.map(toYahooSymbol);
+      const quotesBySymbol = await yahooFinance.quote(yahooSymbols, {
+        return: "object",
       });
+
+      // Sector fetches ARE still one-request-per-symbol (quoteSummary doesn't
+      // batch), so only do it for symbols we don't already have a static
+      // sector for, and only after we know the quote actually succeeded.
+      const needsLiveSector: string[] = [];
+
+      for (const symbol of uncached) {
+        const quote = quotesBySymbol[toYahooSymbol(symbol)];
+        if (!quote) continue;
+
+        const staticEntry = NIFTY500_STOCKS.find((s) => s.symbol === symbol);
+        const price = quoteToStockPrice(
+          quote,
+          symbol,
+          staticEntry?.sector,
+          staticEntry?.companyName
+        );
+        if (!price) continue;
+
+        if (!price.sector) needsLiveSector.push(symbol);
+
+        setCache(symbol, price);
+        result[symbol] = price;
+      }
+
+      // Small, bounded set (only symbols with no static sector match) — safe
+      // to fetch live, one quoteSummary call per symbol.
+      if (needsLiveSector.length > 0) {
+        await Promise.all(
+          needsLiveSector.map(async (symbol) => {
+            const sector = await fetchSectorLive(symbol);
+            if (sector && result[symbol]) {
+              result[symbol] = { ...result[symbol], sector };
+              setCache(symbol, result[symbol]);
+            }
+          })
+        );
+      }
     }
 
     return NextResponse.json({ success: true, data: result });
