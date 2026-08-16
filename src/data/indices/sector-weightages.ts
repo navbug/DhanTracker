@@ -3,7 +3,7 @@
 // Data extracted from research notes
 
 // ─── UPDATE THIS DATE whenever weightages are manually refreshed ─────────────
-export const LAST_UPDATED = "June 30, 2026";
+export const LAST_UPDATED = "July 31, 2026";
 
 export interface SectorIndex {
   name: string;
