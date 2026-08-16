@@ -15,6 +15,24 @@ const SECTOR_WEIGHTS = NIFTY50_ENTRY.sectorWeights ?? [];
 // All other indices (everything except the sector-weights source)
 const ALL_INDICES = HIGH_WEIGHTAGE_INDICES;
 
+// ─── WEIGHT BAR ───────────────────────────────────────────────────────────────
+// Small horizontal bar under each row, scaled relative to the largest weight
+// in that specific table — makes the top holding read as (near) full and
+// everything else scale visually against it, rather than against a flat 100%
+// baseline where most bars would look identically tiny.
+
+function WeightBar({ weight, maxWeight }: { weight: number | null; maxWeight: number }) {
+  const pct = weight ? Math.max(4, (weight / maxWeight) * 100) : 0;
+  return (
+    <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
+      <div
+        className="h-full rounded-full bg-primary/70"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
 // ─── SECTOR WEIGHTS TABLE ─────────────────────────────────────────────────────
 
 function SectorWeightsTable() {
@@ -22,6 +40,8 @@ function SectorWeightsTable() {
     ...SECTOR_WEIGHTS,
     ...Array(Math.max(0, ROWS - SECTOR_WEIGHTS.length)).fill(null),
   ].slice(0, ROWS);
+
+  const maxWeight = Math.max(...SECTOR_WEIGHTS.map((s) => s.weight), 0.0001);
 
   return (
     <div className="rounded-xl border border-border bg-white shadow-card overflow-hidden">
@@ -45,16 +65,19 @@ function SectorWeightsTable() {
         <div
           key={i}
           className={cn(
-            "grid grid-cols-[1fr_80px] items-center px-4 py-2.5",
+            "px-4 py-2.5",
             i < ROWS - 1 && "border-b border-border/50"
           )}
         >
-          <span className="text-[13px] text-foreground truncate">
-            {row?.sector ?? <span className="text-muted-foreground/30">—</span>}
-          </span>
-          <span className="text-[13px] font-semibold font-mono text-right text-foreground num">
-            {row ? `${row.weight.toFixed(2)}%` : <span className="text-muted-foreground/30">—</span>}
-          </span>
+          <div className="grid grid-cols-[1fr_80px] items-center">
+            <span className="text-[13px] text-foreground truncate">
+              {row?.sector ?? <span className="text-muted-foreground/30">—</span>}
+            </span>
+            <span className="text-[13px] font-semibold font-mono text-right text-foreground num">
+              {row ? `${row.weight.toFixed(2)}%` : <span className="text-muted-foreground/30">—</span>}
+            </span>
+          </div>
+          <WeightBar weight={row?.weight ?? null} maxWeight={maxWeight} />
         </div>
       ))}
     </div>
@@ -68,6 +91,8 @@ function IndexCard({ index }: { index: SectorIndex }) {
     ...index.topStocks,
     ...Array(Math.max(0, ROWS - index.topStocks.length)).fill(null),
   ].slice(0, ROWS);
+
+  const maxWeight = Math.max(...index.topStocks.map((s) => s.weight), 0.0001);
 
   return (
     <div className="rounded-xl border border-border bg-white shadow-card overflow-hidden">
@@ -94,22 +119,25 @@ function IndexCard({ index }: { index: SectorIndex }) {
         <div
           key={i}
           className={cn(
-            "grid grid-cols-[28px_1fr_80px] items-center px-4 py-2.5",
+            "px-4 py-2.5",
             i < ROWS - 1 && "border-b border-border/50"
           )}
         >
-          <span className="text-[11px] text-muted-foreground/50 tabular-nums select-none">
-            {stock ? i + 1 : ""}
-          </span>
-          <span className="text-[13px] text-foreground truncate pr-2">
-            {stock?.companyName ?? <span className="text-muted-foreground/30">—</span>}
-          </span>
-          <span className={cn(
-            "text-[13px] font-semibold font-mono text-right num",
-            stock ? "text-foreground" : "text-muted-foreground/30"
-          )}>
-            {stock ? `${stock.weight.toFixed(2)}%` : "—"}
-          </span>
+          <div className="grid grid-cols-[28px_1fr_80px] items-center">
+            <span className="text-[11px] text-muted-foreground/50 tabular-nums select-none">
+              {stock ? i + 1 : ""}
+            </span>
+            <span className="text-[13px] text-foreground truncate pr-2">
+              {stock?.companyName ?? <span className="text-muted-foreground/30">—</span>}
+            </span>
+            <span className={cn(
+              "text-[13px] font-semibold font-mono text-right num",
+              stock ? "text-foreground" : "text-muted-foreground/30"
+            )}>
+              {stock ? `${stock.weight.toFixed(2)}%` : "—"}
+            </span>
+          </div>
+          <WeightBar weight={stock?.weight ?? null} maxWeight={maxWeight} />
         </div>
       ))}
     </div>
@@ -140,13 +168,11 @@ export function HighWeightageClient() {
         </div>
       </div>
 
-      {/* ── Nifty Sector weights — full-width top card ── */}
-      <div className="max-w-sm">
-        <SectorWeightsTable />
-      </div>
-
-      {/* ── All index cards ── */}
+      {/* ── Nifty Sector weights card now lives in the same grid as every
+          other index card, instead of its own constrained-width row above
+          it, so other cards flow in beside it wherever there's space. ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <SectorWeightsTable />
         {ALL_INDICES.map((index) => (
           <IndexCard key={index.slug} index={index} />
         ))}
