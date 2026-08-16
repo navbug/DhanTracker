@@ -196,6 +196,10 @@ Deployed on Vercel. If you fork this, a few things worth knowing:
 - Set every environment variable from `.env.example` in the Vercel dashboard before your first deploy — the app fails auth and DB calls without them.
 - The scheduled cache warm-up runs via `instrumentation.ts` on server start, plus a manual "Refresh prices" action in the UI that hits `/api/prices/refresh` on demand.
 
+## 📄 License
+ 
+MIT © [navbug](https://github.com/navbug) — see [LICENSE](./LICENSE) for details.
+
 ---
 
 <div align="center">
