@@ -224,18 +224,54 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
       return;
     }
 
-    const newOrder = [...(watchlist?.stocks ?? [])];
-    const [moved] = newOrder.splice(draggingIndex, 1);
-    newOrder.splice(dropIndex, 0, moved);
+    // `draggingIndex` / `dropIndex` are indices into `displayStocks` (the
+    // sorted/filtered list actually rendered on screen), NOT indices into
+    // `watchlist.stocks` (the raw server order). When a column sort is
+    // active (e.g. the default "marketCap" sort) those two arrays are in
+    // different orders, so splicing by raw index would move the wrong
+    // stock entirely. We match by symbol identity instead, which is
+    // correct regardless of sort/filter state.
+    const draggedStock = displayStocks[draggingIndex];
+    const targetStock = displayStocks[dropIndex];
+    if (!draggedStock || !targetStock) {
+      setDragState({ draggingIndex: null, overIndex: null });
+      return;
+    }
+
+    const fullOrder = [...(watchlist?.stocks ?? [])];
+    const fromIndex = fullOrder.findIndex(
+      (s) => s.symbol === draggedStock.symbol,
+    );
+    let toIndex = fullOrder.findIndex((s) => s.symbol === targetStock.symbol);
+
+    if (fromIndex === -1 || toIndex === -1) {
+      setDragState({ draggingIndex: null, overIndex: null });
+      return;
+    }
+
+    const [moved] = fullOrder.splice(fromIndex, 1);
+    if (fromIndex < toIndex) toIndex -= 1; // account for the shift after removal
+    fullOrder.splice(toIndex, 0, moved);
+
+    const newOrder = fullOrder.map((s, i) => ({ ...s, position: i }));
 
     // Optimistically update local order
-    setStocks(newOrder.map((s, i) => ({ ...s, position: i })));
+    setStocks(newOrder);
     setDragState({ draggingIndex: null, overIndex: null });
 
+    // A manual drag only makes sense against the custom order — if a
+    // column sort is active, `displayStocks` would immediately re-sort
+    // itself back to sorted order on the next render and the reorder
+    // would appear to silently do nothing. Clear the sort so the new
+    // order is actually visible.
+    if (sortField !== null) {
+      setSortField(null);
+      sortFieldRef.current = null;
+    }
+
     // Persist to server
-    const orderPayload = newOrder.map((s, i) => ({ ...s, position: i }));
     try {
-      await reorderMutation.mutateAsync(orderPayload);
+      await reorderMutation.mutateAsync(newOrder);
     } catch {
       setStocks(null); // Rollback on failure
     }
