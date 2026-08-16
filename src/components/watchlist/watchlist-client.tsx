@@ -17,7 +17,6 @@ import {
   useRefreshPrices,
 } from "@/hooks/use-prices";
 import { useNotesStore } from "@/store/notes-store";
-import { getNifty500Stock } from "@/data/indices/index";
 import {
   StockRow,
   WatchlistTableHeader,
@@ -143,18 +142,12 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
             (priceMap as Record<string, StockPrice>)[b.symbol]?.pChange ??
             -Infinity;
         } else if (sortField === "marketCap") {
-          // Prefer live price data, then the static Nifty 500 dataset
-          // (custom-watchlist WatchlistStock DB rows never have their own
-          // marketCap — only a symbol — so without this fallback every
-          // custom-watchlist stock would sort as if its market cap were 0).
           av =
             (priceMap as Record<string, StockPrice>)[a.symbol]?.marketCap ??
-            getNifty500Stock(a.symbol)?.marketCap ??
             a.marketCap ??
             0;
           bv =
             (priceMap as Record<string, StockPrice>)[b.symbol]?.marketCap ??
-            getNifty500Stock(b.symbol)?.marketCap ??
             b.marketCap ??
             0;
         }
@@ -207,7 +200,13 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
   });
 
   // ── Drag and drop (custom watchlists only) ─────────────
-  const handleDragStart = (index: number) => {
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    // Firefox requires dataTransfer.setData() to be called in dragstart or
+    // it silently refuses to start the drag at all (Chrome/Safari are more
+    // lenient and can appear to "work" without it, which is why this was
+    // easy to miss during testing).
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
     setDragState({ draggingIndex: index, overIndex: index });
     // Initialize local stocks for reordering
     setStocks([...(watchlist?.stocks ?? [])]);
@@ -357,23 +356,15 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                 const price = (priceMap as Record<string, StockPrice>)[
                   stock.symbol
                 ];
-                // Enrich stock metadata: prefer live price data (freshest),
-                // then the static Nifty 500 dataset (reliable, always
-                // available — this is what fills in sector/marketCap for
-                // CUSTOM watchlists, since WatchlistStock rows in the DB
-                // only ever store a symbol, nothing else), then whatever
-                // the stock record itself already has.
-                const staticStock = getNifty500Stock(stock.symbol);
-                const enrichedStock = {
-                  ...stock,
-                  companyName:
-                    stock.companyName ??
-                    price?.companyName ??
-                    staticStock?.companyName,
-                  sector: stock.sector ?? price?.sector ?? staticStock?.sector,
-                  marketCap:
-                    price?.marketCap ?? staticStock?.marketCap ?? stock.marketCap,
-                };
+                // Enrich stock metadata from live price data when available
+                const enrichedStock = price
+                  ? {
+                      ...stock,
+                      companyName: stock.companyName ?? price.companyName,
+                      sector: stock.sector ?? price.sector,
+                      marketCap: price.marketCap ?? stock.marketCap,
+                    }
+                  : stock;
                 const isDragging =
                   dragState.draggingIndex === virtualRow.index;
                 const isDragOver =
@@ -389,11 +380,8 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                       width: "100%",
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    draggable={isCustom}
-                    onDragStart={() => handleDragStart(virtualRow.index)}
                     onDragOver={(e) => handleDragOver(e, virtualRow.index)}
                     onDrop={() => handleDrop(virtualRow.index)}
-                    onDragEnd={handleDragEnd}
                     className={cn(
                       isDragOver &&
                         "outline outline-1 outline-primary/30 bg-primary/5",
@@ -416,7 +404,10 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                       dragHandleProps={
                         isCustom
                           ? {
-                              onMouseDown: () => {}, // handled by draggable div above
+                              draggable: true,
+                              onDragStart: (e) =>
+                                handleDragStart(e, virtualRow.index),
+                              onDragEnd: handleDragEnd,
                             }
                           : undefined
                       }
