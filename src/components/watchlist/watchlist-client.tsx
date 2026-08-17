@@ -200,6 +200,13 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
   });
 
   // ── Drag and drop (custom watchlists only) ─────────────
+  // Reordering only makes sense — and only produces a correct result — when
+  // what's on screen exactly matches the underlying stock order. If a sort
+  // or search filter is active, displayStocks is a reordered/filtered view
+  // of baseStocks, so dragged/dropped indices wouldn't map to the right
+  // stocks at all.
+  const canReorder = isCustom && sortField === null && search.trim() === "";
+
   const handleDragStart = (e: React.DragEvent, index: number) => {
     // Firefox requires dataTransfer.setData() to be called in dragstart or
     // it silently refuses to start the drag at all (Chrome/Safari are more
@@ -209,7 +216,7 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
     e.dataTransfer.setData("text/plain", String(index));
     setDragState({ draggingIndex: index, overIndex: index });
     // Initialize local stocks for reordering
-    setStocks([...(watchlist?.stocks ?? [])]);
+    setStocks([...baseStocks]);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -219,12 +226,12 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
 
   const handleDrop = async (dropIndex: number) => {
     const { draggingIndex } = dragState;
-    if (draggingIndex === null || draggingIndex === dropIndex) {
+    if (!canReorder || draggingIndex === null || draggingIndex === dropIndex) {
       setDragState({ draggingIndex: null, overIndex: null });
       return;
     }
 
-    const newOrder = [...(watchlist?.stocks ?? [])];
+    const newOrder = [...baseStocks];
     const [moved] = newOrder.splice(draggingIndex, 1);
     newOrder.splice(dropIndex, 0, moved);
 
@@ -392,6 +399,7 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                       price={price}
                       index={virtualRow.index}
                       isCustom={isCustom}
+                      canReorder={canReorder}
                       note={notes[enrichedStock.symbol.toUpperCase()]}
                       isLoading={pricesLoading && !price}
                       isDragging={isDragging}
@@ -402,7 +410,7 @@ export function WatchlistClient({ watchlistId }: WatchlistClientProps) {
                       }
                       onDelete={isCustom ? handleDelete : undefined}
                       dragHandleProps={
-                        isCustom
+                        canReorder
                           ? {
                               draggable: true,
                               onDragStart: (e) =>
