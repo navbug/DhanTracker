@@ -56,7 +56,6 @@ interface StockRowProps {
   // Drag-and-drop props (only for custom watchlists)
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   isDragging?: boolean;
-  canReorder?: boolean; // false when a sort/search is active — dragging would be ambiguous
 }
 
 export const StockRow = memo(function StockRow({
@@ -70,7 +69,6 @@ export const StockRow = memo(function StockRow({
   onDelete,
   dragHandleProps,
   isDragging,
-  canReorder,
 }: StockRowProps) {
   const hasNote = Boolean(note?.trim());
 
@@ -96,25 +94,16 @@ export const StockRow = memo(function StockRow({
 
       {/* ── Drag handle (custom only) ── */}
       {isCustom && (
-        <SimpleTooltip
-          content={
-            canReorder
-              ? "Drag to reorder"
-              : "Clear sort & search to reorder manually"
-          }
+        <div
+          {...dragHandleProps}
+          className={cn(
+            "flex items-center justify-center text-muted-foreground/30",
+            "hover:text-muted-foreground cursor-grab active:cursor-grabbing",
+            "transition-colors"
+          )}
         >
-          <div
-            {...(canReorder ? dragHandleProps : {})}
-            className={cn(
-              "flex items-center justify-center transition-colors",
-              canReorder
-                ? "text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
-                : "text-muted-foreground/15 cursor-not-allowed"
-            )}
-          >
-            <GripVertical className="size-4" />
-          </div>
-        </SimpleTooltip>
+          <GripVertical className="size-4" />
+        </div>
       )}
 
       {/* ── Notes icon (custom watchlists only) ── */}
