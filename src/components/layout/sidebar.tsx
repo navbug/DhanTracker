@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import type { Session } from "next-auth";
 import {
@@ -13,6 +13,7 @@ import {
   FlaskConical,
   ChevronRight,
   Plus,
+  Trash2,
   User,
   LogOut,
   PanelLeftClose,
@@ -22,7 +23,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PREDEFINED_WATCHLISTS } from "@/types";
 import { useWatchlistStore } from "@/store/watchlist-store";
-import { useCreateWatchlist } from "@/hooks/use-watchlist";
+import { useCreateWatchlist, useDeleteWatchlist } from "@/hooks/use-watchlist";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +107,65 @@ function CreateWatchlistModal({
   );
 }
 
+// ─── DELETE WATCHLIST MODAL ───────────────────────────────────────────────────
+
+function DeleteWatchlistModal({
+  watchlist,
+  onClose,
+}: {
+  watchlist: { id: string; name: string } | null;
+  onClose: () => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { mutateAsync } = useDeleteWatchlist();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    if (!watchlist) return;
+    setIsDeleting(true);
+    try {
+      await mutateAsync(watchlist.id);
+      // If we're currently viewing the watchlist we just deleted, navigate away
+      if (pathname === `/watchlist/${watchlist.id}`) {
+        router.push("/dashboard");
+      }
+      onClose();
+    } catch {
+      // useDeleteWatchlist already toasts the error — just keep the dialog open
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!watchlist} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete watchlist</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground py-1">
+          Delete <span className="font-medium text-foreground">{watchlist?.name}</span>? This
+          removes all stocks in it and can&apos;t be undone.
+        </p>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isDeleting} size="sm">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDelete}
+            loading={isDeleting}
+            size="sm"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── PROFILE MODAL ────────────────────────────────────────────────────────────
 
 function ProfileModal({
@@ -167,6 +227,7 @@ export function Sidebar({ user, isOpen, onToggle }: SidebarProps) {
   const [createWatchlistOpen, setCreateWatchlistOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [watchlistsExpanded, setWatchlistsExpanded] = useState(true);
+  const [watchlistToDelete, setWatchlistToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Reads directly from Zustand — zero API call
   const { customWatchlists } = useWatchlistStore();
@@ -259,19 +320,33 @@ export function Sidebar({ user, isOpen, onToggle }: SidebarProps) {
 
                 {/* Custom — reads from Zustand, no API call */}
                 {customWatchlists.map((wl) => (
-                  <Link
-                    key={wl.id}
-                    href={`/watchlist/${wl.id}`}
-                    className={cn(
-                      "sidebar-item",
-                      isActiveRoute(`/watchlist/${wl.id}`) && "active",
-                      isOpen ? "pl-5" : "justify-center px-0"
+                  <div key={wl.id} className="group relative flex items-center">
+                    <Link
+                      href={`/watchlist/${wl.id}`}
+                      className={cn(
+                        "sidebar-item flex-1 min-w-0",
+                        isActiveRoute(`/watchlist/${wl.id}`) && "active",
+                        isOpen ? "pl-5 pr-7" : "justify-center px-0"
+                      )}
+                      title={!isOpen ? wl.name : undefined}
+                    >
+                      <Eye className="size-3.5 shrink-0 text-muted-foreground/60" />
+                      {isOpen && <span className="truncate text-xs">{wl.name}</span>}
+                    </Link>
+                    {isOpen && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setWatchlistToDelete({ id: wl.id, name: wl.name });
+                        }}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground/0 opacity-0 group-hover:opacity-100 group-hover:text-muted-foreground/50 hover:!text-destructive hover:bg-destructive/10 transition-all"
+                        title="Delete watchlist"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
                     )}
-                    title={!isOpen ? wl.name : undefined}
-                  >
-                    <Eye className="size-3.5 shrink-0 text-muted-foreground/60" />
-                    {isOpen && <span className="truncate text-xs">{wl.name}</span>}
-                  </Link>
+                  </div>
                 ))}
 
                 {/* Create button */}
@@ -321,6 +396,10 @@ export function Sidebar({ user, isOpen, onToggle }: SidebarProps) {
       <CreateWatchlistModal
         open={createWatchlistOpen}
         onClose={() => setCreateWatchlistOpen(false)}
+      />
+      <DeleteWatchlistModal
+        watchlist={watchlistToDelete}
+        onClose={() => setWatchlistToDelete(null)}
       />
       <ProfileModal
         open={profileOpen}
