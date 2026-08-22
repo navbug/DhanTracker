@@ -10,6 +10,8 @@ const PROTECTED_ROUTES = [
   "/trade-ledger",
   "/high-weightage",
   "/research",
+  "/trade-setups",
+  "/premium",
 ];
 
 const AUTH_ROUTES = ["/"];

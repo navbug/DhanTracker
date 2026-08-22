@@ -11,6 +11,8 @@ import {
   TrendingUp,
   Eye,
   FlaskConical,
+  Target,
+  Crown,
   ChevronRight,
   Plus,
   Trash2,
@@ -49,7 +51,11 @@ const NAV_ITEMS = [
   { href: "/trade-ledger",   label: "Trade Ledger",           icon: BookOpen        },
   { href: "/high-weightage", label: "High Weightage Stocks",  icon: TrendingUp      },
   { href: "/research",       label: "Research Boards",        icon: FlaskConical    },
+  { href: "/trade-setups",   label: "Trade Setups",           icon: Target          },
 ];
+
+// Shown separately, styled to stand out — the entry point to the Premium page.
+const PREMIUM_NAV_ITEM = { href: "/premium", label: "Premium Plan", icon: Crown };
 
 // ─── CREATE WATCHLIST MODAL ───────────────────────────────────────────────────
 
@@ -281,6 +287,20 @@ export function Sidebar({ user, isOpen, onToggle }: SidebarProps) {
               {isOpen && <span className="truncate">{label}</span>}
             </Link>
           ))}
+
+          {/* ── Premium — entry point to the subscribe page ── */}
+          <Link
+            href={PREMIUM_NAV_ITEM.href}
+            className={cn(
+              "sidebar-item text-amber-700 hover:bg-amber-50",
+              isActiveRoute(PREMIUM_NAV_ITEM.href) && "active",
+              !isOpen && "justify-center px-0"
+            )}
+            title={!isOpen ? PREMIUM_NAV_ITEM.label : undefined}
+          >
+            <Crown className="size-4 shrink-0" />
+            {isOpen && <span className="truncate">{PREMIUM_NAV_ITEM.label}</span>}
+          </Link>
 
           {/* ── Watchlists section ── */}
           <div className="mt-3">

@@ -173,6 +173,39 @@ export interface ResearchFormValues {
   description?: string;
 }
 
+// ─── TRADE SETUPS (admin-published, shared feed) ─────────────────────────────
+
+export type SetupStage = "UPCOMING" | "LIVE" | "PAST";
+
+export interface TradeSetupPost {
+  id: string;
+  stockSymbol: string;
+  companyName: string | null;
+  description: string | null;
+  stage: SetupStage;
+  chartImageUrl: string;
+  resultChartImageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TradeSetupFormValues {
+  stockSymbol: string;
+  companyName?: string;
+  description?: string;
+  stage: SetupStage;
+  chartImageUrl: string;
+  resultChartImageUrl?: string;
+}
+
+// ─── PREMIUM / SUBSCRIPTION ───────────────────────────────────────────────────
+
+export interface SubscriptionStatus {
+  isPremium: boolean;
+  isAdmin: boolean;
+  premiumUntil: string | null;
+}
+
 // ─── API RESPONSE TYPES ───────────────────────────────────────────────────────
 
 export interface ApiSuccess<T> {
@@ -250,4 +283,10 @@ export const RESEARCH_CATEGORY_LABELS: Record<ResearchCategory, string> = {
   SECTOR: "Sector",
   STOCK: "Stock",
   PERSONAL: "Personal",
+};
+
+export const SETUP_STAGE_LABELS: Record<SetupStage, string> = {
+  UPCOMING: "Upcoming",
+  LIVE: "Live",
+  PAST: "Past",
 };

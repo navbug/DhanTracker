@@ -75,3 +75,38 @@ export async function requireAuth() {
   }
   return user;
 }
+
+/**
+ * Requires the current session user to be an admin (site owner).
+ * `isAdmin` is a DB-only flag — there's no self-serve UI to grant it,
+ * so it must be set directly (e.g. via `npx prisma studio`).
+ */
+export async function requireAdmin() {
+  const user = await requireAuth();
+  if (!user.id) throw new Error("Forbidden");
+
+  const dbUser = await db.user.findUnique({
+    where: { id: user.id },
+    select: { isAdmin: true },
+  });
+
+  if (!dbUser?.isAdmin) {
+    throw new Error("Forbidden");
+  }
+
+  return user;
+}
+
+/**
+ * Fresh DB lookup (never cached in the JWT) so premium status reflects
+ * immediately after a successful payment. Admins always have full access.
+ */
+export async function isPremiumActive(userId: string): Promise<boolean> {
+  const dbUser = await db.user.findUnique({
+    where: { id: userId },
+    select: { premiumUntil: true, isAdmin: true },
+  });
+  if (!dbUser) return false;
+  if (dbUser.isAdmin) return true;
+  return Boolean(dbUser.premiumUntil && dbUser.premiumUntil.getTime() > Date.now());
+}
